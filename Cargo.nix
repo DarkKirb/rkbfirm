@@ -4,7 +4,7 @@
 args@{
   release ? true,
   rootFeatures ? [
-    "rust-template/default"
+    "rkbfirm/default"
   ],
   rustPackages,
   buildRustPackages,
@@ -41,7 +41,7 @@ in
 {
   cargo2nixVersion = "0.11.0";
   workspace = {
-    rust-template = rustPackages.unknown.rust-template."0.1.0";
+    rkbfirm = rustPackages.unknown.rkbfirm."0.1.0";
   };
   "registry+https://github.com/rust-lang/crates.io-index".aho-corasick."0.7.18" = overridableMkRustCrate (profileName: rec {
     name = "aho-corasick";
@@ -622,6 +622,23 @@ in
     };
   });
   
+  "unknown".rkbfirm."0.1.0" = overridableMkRustCrate (profileName: rec {
+    name = "rkbfirm";
+    version = "0.1.0";
+    registry = "unknown";
+    src = fetchCrateLocal workspaceSrc;
+    dependencies = {
+      cortex_m = rustPackages."registry+https://github.com/rust-lang/crates.io-index".cortex-m."0.7.5" { inherit profileName; };
+      cortex_m_rt = rustPackages."registry+https://github.com/rust-lang/crates.io-index".cortex-m-rt."0.7.1" { inherit profileName; };
+      defmt = rustPackages."registry+https://github.com/rust-lang/crates.io-index".defmt."0.3.2" { inherit profileName; };
+      defmt_rtt = rustPackages."registry+https://github.com/rust-lang/crates.io-index".defmt-rtt."0.3.2" { inherit profileName; };
+      embedded_hal = rustPackages."registry+https://github.com/rust-lang/crates.io-index".embedded-hal."0.2.7" { inherit profileName; };
+      embedded_time = rustPackages."registry+https://github.com/rust-lang/crates.io-index".embedded-time."0.12.1" { inherit profileName; };
+      panic_probe = rustPackages."registry+https://github.com/rust-lang/crates.io-index".panic-probe."0.3.0" { inherit profileName; };
+      rp_pico = rustPackages."registry+https://github.com/rust-lang/crates.io-index".rp-pico."0.4.1" { inherit profileName; };
+    };
+  });
+  
   "registry+https://github.com/rust-lang/crates.io-index".rp-pico."0.4.1" = overridableMkRustCrate (profileName: rec {
     name = "rp-pico";
     version = "0.4.1";
@@ -709,23 +726,6 @@ in
       cortex_m = rustPackages."registry+https://github.com/rust-lang/crates.io-index".cortex-m."0.7.5" { inherit profileName; };
       cortex_m_rt = rustPackages."registry+https://github.com/rust-lang/crates.io-index".cortex-m-rt."0.7.1" { inherit profileName; };
       vcell = rustPackages."registry+https://github.com/rust-lang/crates.io-index".vcell."0.1.3" { inherit profileName; };
-    };
-  });
-  
-  "unknown".rust-template."0.1.0" = overridableMkRustCrate (profileName: rec {
-    name = "rust-template";
-    version = "0.1.0";
-    registry = "unknown";
-    src = fetchCrateLocal workspaceSrc;
-    dependencies = {
-      cortex_m = rustPackages."registry+https://github.com/rust-lang/crates.io-index".cortex-m."0.7.5" { inherit profileName; };
-      cortex_m_rt = rustPackages."registry+https://github.com/rust-lang/crates.io-index".cortex-m-rt."0.7.1" { inherit profileName; };
-      defmt = rustPackages."registry+https://github.com/rust-lang/crates.io-index".defmt."0.3.2" { inherit profileName; };
-      defmt_rtt = rustPackages."registry+https://github.com/rust-lang/crates.io-index".defmt-rtt."0.3.2" { inherit profileName; };
-      embedded_hal = rustPackages."registry+https://github.com/rust-lang/crates.io-index".embedded-hal."0.2.7" { inherit profileName; };
-      embedded_time = rustPackages."registry+https://github.com/rust-lang/crates.io-index".embedded-time."0.12.1" { inherit profileName; };
-      panic_probe = rustPackages."registry+https://github.com/rust-lang/crates.io-index".panic-probe."0.3.0" { inherit profileName; };
-      rp_pico = rustPackages."registry+https://github.com/rust-lang/crates.io-index".rp-pico."0.4.1" { inherit profileName; };
     };
   });
   

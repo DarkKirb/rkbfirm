@@ -43,9 +43,11 @@
             targets = ["thumbv6m-none-eabi"];
           })
           cargo2nix.packages.${system}.cargo2nix
+          elf2uf2-rs
+          cargo-embed
         ];
       };
-      packages = { 
+      packages = rec { 
         rkbfirm-source = pkgs.releaseTools.sourceTarball {
           name = "rkbfirm-source";
           src = self;
@@ -60,8 +62,34 @@
             (cd .. && tar -cf- $releaseName | zstd --ultra -22 > $out/tarballs/$releaseName.tar.zst) || false
           '';
         };
-        rust-template = rustPkgs.workspace.rust-template { };
-
+        rkbfirm-crate = (rustPkgs.workspace.rkbfirm { }).overrideAttrs(old: {
+          configureCargo = "true";
+        });
+        rkbfirm = pkgs.stdenvNoCC.mkDerivation {
+          pname = "rkbfirm";
+          src = self;
+          version = self.lastModifiedDate;
+          nativeBuildInputs = with pkgs; [
+            (elf2uf2-rs.overrideAttrs (old: {
+              patches = [
+                ./elf2uf2.patch
+              ];
+            }))
+            zstd
+          ];
+          buildInputs = [rkbfirm-crate];
+          buildPhase = ''
+            elf2uf2-rs ${rkbfirm-crate}/bin/rkbfirm rkbfirm.uf2 --verbose
+          '';
+          installPhase = ''
+            mkdir $out
+            zstd --ultra -22 < rkbfirm.uf2 > $out/rkbfirm.uf2.zst
+            mkdir $out/nix-support
+            echo "file binary-dist $out/rkbfirm.uf2.zst" > $out/nix-support/hydra-build-products
+            echo "$pname-$version" > $out/nix-support/hydra-release-name
+          '';
+        };
+        default = rkbfirm;
       };
       nixosModules.default = import ./nixos {
         inherit inputs system;

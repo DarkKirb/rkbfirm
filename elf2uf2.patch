@@ -1,0 +1,13 @@
+diff --git a/src/main.rs b/src/main.rs
+index 7d55e7b..72bfdeb 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -176,7 +176,7 @@ fn elf2uf2(mut input: impl Read + Seek, mut output: impl Write) -> Result<(), Bo
+ fn main() -> Result<(), Box<dyn Error>> {
+     OPTS.set(Opts::parse()).unwrap();
+ 
+-    let serial_ports_before = serialport::available_ports()?;
++    let serial_ports_before = Vec::new();
+     let mut deployed_path = None;
+ 
+     {

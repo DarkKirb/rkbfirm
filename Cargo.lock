@@ -430,6 +430,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "rkbfirm"
+version = "0.1.0"
+dependencies = [
+ "cortex-m",
+ "cortex-m-rt",
+ "defmt",
+ "defmt-rtt",
+ "embedded-hal",
+ "embedded-time",
+ "panic-probe",
+ "rp-pico",
+]
+
+[[package]]
 name = "rp-pico"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -498,20 +512,6 @@ dependencies = [
  "cortex-m",
  "cortex-m-rt",
  "vcell",
-]
-
-[[package]]
-name = "rust-template"
-version = "0.1.0"
-dependencies = [
- "cortex-m",
- "cortex-m-rt",
- "defmt",
- "defmt-rtt",
- "embedded-hal",
- "embedded-time",
- "panic-probe",
- "rp-pico",
 ]
 
 [[package]]
