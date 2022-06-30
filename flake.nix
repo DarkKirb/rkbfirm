@@ -40,6 +40,7 @@
         buildInputs = [
           (rust-bin.nightly.latest.default.override {
             extensions = [ "rust-src" ];
+            targets = ["thumbv6m-none-eabi"];
           })
           cargo2nix.packages.${system}.cargo2nix
         ];
