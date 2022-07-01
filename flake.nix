@@ -19,7 +19,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, cargo2nix, ... } @ inputs: flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
+  outputs = { self, nixpkgs, flake-utils, rust-overlay, cargo2nix, ... } @ inputs: flake-utils.lib.eachSystem [ "aarch64-linux" "x86_64-linux" ] (system:
     let
       overlays = [
         cargo2nix.overlays.default

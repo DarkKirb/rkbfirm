@@ -284,3 +284,5 @@ impl<T: Pointable + ?Sized, const BASE: usize> fmt::Pointer for ConstPtr<T, BASE
         fmt::Pointer::fmt(&self.wide(), f)
     }
 }
+
+
