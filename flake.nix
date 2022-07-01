@@ -45,6 +45,7 @@
           cargo2nix.packages.${system}.cargo2nix
           elf2uf2-rs
           cargo-embed
+          llvmPackages_latest.bintools
         ];
       };
       packages = rec { 
