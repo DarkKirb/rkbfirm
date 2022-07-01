@@ -27,6 +27,7 @@
       ];
       pkgs = import nixpkgs {
         inherit system overlays;
+        config.contentAddressedByDefault = true;
       };
       rustPkgs = pkgs.rustBuilder.makePackageSet {
         packageFun = import ./Cargo.nix;
