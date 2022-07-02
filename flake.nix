@@ -90,9 +90,9 @@
             echo "file binary-dist $out/rkbfirm.uf2.zst" > $out/nix-support/hydra-build-products
             echo "$pname-$version" > $out/nix-support/hydra-release-name
           '';
-          devShell = devShells.default;
         };
         default = rkbfirm;
+        devShell = devShells.default;
       };
       nixosModules.default = import ./nixos {
         inherit inputs system;
