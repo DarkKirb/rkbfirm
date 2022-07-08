@@ -1,4 +1,4 @@
-//! Constant pointer
+//! Mutable pointer
 
 use core::{
     cmp::Ordering,
@@ -8,18 +8,18 @@ use core::{
     ops::CoerceUnsized,
 };
 
-use crate::{base_ptr, Pointable, PointerConversionError};
+use crate::{base_ptr_mut, Pointable, PointerConversionError};
 
-use super::MutPtr;
+use super::ConstPtr;
 
-/// A tiny constant pointer
-pub struct ConstPtr<T: Pointable + ?Sized, const BASE: usize> {
+/// A tiny mutable pointer
+pub struct MutPtr<T: Pointable + ?Sized, const BASE: usize> {
     pub(crate) ptr: u16,
     pub(crate) meta: <T as Pointable>::PointerMetaTiny,
     pub(crate) _marker: PhantomData<*const T>,
 }
 
-impl<T: Pointable + ?Sized, const BASE: usize> ConstPtr<T, BASE> {
+impl<T: Pointable + ?Sized, const BASE: usize> MutPtr<T, BASE> {
     /// Create a new constant pointer from raw parts
     pub const fn from_raw_parts(ptr: u16, meta: <T as Pointable>::PointerMetaTiny) -> Self {
         Self {
@@ -32,7 +32,7 @@ impl<T: Pointable + ?Sized, const BASE: usize> ConstPtr<T, BASE> {
     ///
     /// # Safety
     /// This is unsafe because the address of the pointer may change.
-    pub unsafe fn new_unchecked(ptr: *const T) -> Self {
+    pub unsafe fn new_unchecked(ptr: *mut T) -> Self {
         let (addr, meta) = T::extract_parts(ptr);
         let addr = if ptr.is_null() {
             0
@@ -45,7 +45,7 @@ impl<T: Pointable + ?Sized, const BASE: usize> ConstPtr<T, BASE> {
     ///
     /// # Errors
     /// Returns an error if the pointer does not fit in the address space
-    pub fn new(ptr: *const T) -> Result<Self, PointerConversionError<T>> {
+    pub fn new(ptr: *mut T) -> Result<Self, PointerConversionError<T>> {
         let (addr, meta) = T::extract_parts(ptr);
         let addr = if ptr.is_null() {
             0
@@ -59,35 +59,34 @@ impl<T: Pointable + ?Sized, const BASE: usize> ConstPtr<T, BASE> {
         Ok(Self::from_raw_parts(addr, meta))
     }
     /// Widens the pointer
-    pub fn wide(self) -> *const T {
+    pub fn wide(self) -> *mut T {
         let addr = if self.ptr == 0 {
             0
         } else {
             usize::from(self.ptr).wrapping_add(BASE)
         };
-        T::create_ptr(base_ptr::<BASE>(), addr, T::huge(self.meta))
+        T::create_ptr_mut(base_ptr_mut::<BASE>(), addr, T::huge(self.meta))
     }
     /// Returns `true` if the pointer is null
     pub const fn is_null(self) -> bool {
         self.ptr == 0
     }
     /// Casts to a pointer of another type
-    pub const fn cast<U: Pointable<PointerMetaTiny = ()>>(self) -> ConstPtr<U, BASE>
+    pub const fn cast<U: Pointable<PointerMetaTiny = ()>>(self) -> MutPtr<U, BASE>
     where
         T: Pointable<PointerMetaTiny = ()>,
     {
-        ConstPtr::from_raw_parts(self.ptr, self.meta)
+        MutPtr::from_raw_parts(self.ptr, self.meta)
     }
     /// Use the pointer value in a new pointer of another type
     pub const fn with_metadata_of<U: Pointable + ?Sized>(
         self,
-        val: ConstPtr<U, BASE>,
-    ) -> ConstPtr<U, BASE> {
-        ConstPtr::from_raw_parts(self.ptr, val.meta)
+        val: MutPtr<U, BASE>,
+    ) -> MutPtr<U, BASE> {
+        MutPtr::from_raw_parts(self.ptr, val.meta)
     }
-    /// Converts the pointer to mutable
-    pub const fn as_mut(self) -> MutPtr<T, BASE> {
-        MutPtr::from_raw_parts(self.ptr, self.meta)
+    pub const fn as_const(self) -> ConstPtr<T, BASE> {
+        ConstPtr::from_raw_parts(self.ptr, self.meta)
     }
     /// Gets the address portion of the pointer
     pub const fn addr(self) -> u16
@@ -141,6 +140,9 @@ impl<T: Pointable + ?Sized, const BASE: usize> ConstPtr<T, BASE> {
             .wrapping_add_signed(count.wrapping_mul(core::mem::size_of::<T>() as i16));
         self
     }
+    // TODO: as_mut
+    // TODO: as_mut_unchecked
+    // TODO: as_uninit_mut
     /// Calculates the distance between two pointers
     pub const unsafe fn offset_from(self, origin: Self) -> i16
     where
@@ -214,18 +216,87 @@ impl<T: Pointable + ?Sized, const BASE: usize> ConstPtr<T, BASE> {
     {
         self.wide().read_unaligned()
     }
+    /// Copies count * size_of<T> bytes from self to dest. the source nad destination may overlap
     pub unsafe fn copy_to(self, dest: MutPtr<T, BASE>, count: u16)
     where
         T: Sized,
     {
-        dest.copy_from(self, count)
+        self.wide().copy_to(dest.wide(), count as usize)
     }
+    /// Copies count * size_of<T> bytes from self to dest. The source and destination may *not*
+    /// overlap.
     pub unsafe fn copy_to_nonoverlapping(self, dest: MutPtr<T, BASE>, count: u16)
     where
         T: Sized,
     {
-        dest.copy_from_nonoverlapping(self, count)
+        self.wide()
+            .copy_to_nonoverlapping(dest.wide(), count as usize)
     }
+    /// Copies count * size_of<T> bytes from src to self. the source and destination may overlap
+    pub unsafe fn copy_from(self, src: ConstPtr<T, BASE>, count: u16)
+    where
+        T: Sized,
+    {
+        self.wide().copy_from(src.wide(), count as usize)
+    }
+    /// Copies count * size_of<T> bytes from src to self. the source and destination may *not*
+    /// overlap
+    pub unsafe fn copy_from_nonoverlapping(self, src: ConstPtr<T, BASE>, count: u16)
+    where
+        T: Sized,
+    {
+        self.wide()
+            .copy_from_nonoverlapping(src.wide(), count as usize)
+    }
+    /// Executes any destructor of the pointed-to value
+    pub unsafe fn drop_in_place(self) {
+        self.wide().drop_in_place()
+    }
+    /// Overwrites a memory location with the given value without reading or dropping the old value
+    pub unsafe fn write(self, val: T)
+    where
+        T: Sized,
+    {
+        self.wide().write(val)
+    }
+    /// Invokes a memset on the specified pointer, setting count * size_of::<T>() bytes of memory
+    /// starting at self to val
+    pub unsafe fn write_bytes(self, val: u8, count: u16)
+    where
+        T: Sized,
+    {
+        self.wide().write_bytes(val, count as usize)
+    }
+    /// Performs a volatile write of a memory location
+    pub unsafe fn write_volatile(self, val: T)
+    where
+        T: Sized,
+    {
+        self.wide().write_volatile(val)
+    }
+    /// Performs an unaligned write of a memory location
+    pub unsafe fn write_unaligned(self, val: T)
+    where
+        T: Sized,
+    {
+        self.wide().write_unaligned(val)
+    }
+    /// Replace the value of self with source, returning the old value
+    pub unsafe fn replace(self, src: T) -> T
+    where
+        T: Sized,
+    {
+        self.wide().replace(src)
+    }
+
+    /// Swaps the values at two mutable locations
+    pub unsafe fn swap(self, with: MutPtr<T, BASE>)
+    where
+        T: Sized,
+    {
+        self.wide().swap(with.wide())
+    }
+
     pub const fn align_offset(self, align: u16) -> u16
     where
         T: Sized,
@@ -239,57 +310,58 @@ impl<T: Pointable + ?Sized, const BASE: usize> ConstPtr<T, BASE> {
     }
 }
 
-impl<T: Pointable<PointerMetaTiny = ()>, const BASE: usize> ConstPtr<[T], BASE> {
+impl<T: Pointable<PointerMetaTiny = ()>, const BASE: usize> MutPtr<[T], BASE> {
     pub const fn len(self) -> u16 {
         self.meta
     }
-    pub const fn as_ptr(self) -> ConstPtr<T, BASE> {
-        ConstPtr::from_raw_parts(self.ptr, ())
+    pub const fn as_mut_ptr(self) -> MutPtr<T, BASE> {
+        MutPtr::from_raw_parts(self.ptr, ())
     }
     // TODO: as_uninit_slice
+    // TODO: as_uninit_slice_mut
 }
 
-impl<T: Pointable + ?Sized, const BASE: usize> PartialEq for ConstPtr<T, BASE> {
+impl<T: Pointable + ?Sized, const BASE: usize> PartialEq for MutPtr<T, BASE> {
     fn eq(&self, other: &Self) -> bool {
         (self.ptr == other.ptr) && (self.meta == other.meta)
     }
 }
 
-impl<T: Pointable + ?Sized, const BASE: usize> Eq for ConstPtr<T, BASE> {}
+impl<T: Pointable + ?Sized, const BASE: usize> Eq for MutPtr<T, BASE> {}
 
-impl<T: Pointable + ?Sized, const BASE: usize> Ord for ConstPtr<T, BASE> {
+impl<T: Pointable + ?Sized, const BASE: usize> Ord for MutPtr<T, BASE> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.ptr.cmp(&other.ptr)
     }
 }
 
-impl<T: Pointable + ?Sized, const BASE: usize> PartialOrd for ConstPtr<T, BASE> {
+impl<T: Pointable + ?Sized, const BASE: usize> PartialOrd for MutPtr<T, BASE> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl<T: Pointable + ?Sized + Unsize<U>, U: Pointable, const BASE: usize>
-    CoerceUnsized<ConstPtr<U, BASE>> for ConstPtr<T, BASE>
+    CoerceUnsized<MutPtr<U, BASE>> for MutPtr<T, BASE>
 where
     <T as Pointable>::PointerMetaTiny: CoerceUnsized<<U as Pointable>::PointerMetaTiny>,
 {
 }
 
-impl<T: Pointable + ?Sized, const BASE: usize> Clone for ConstPtr<T, BASE> {
+impl<T: Pointable + ?Sized, const BASE: usize> Clone for MutPtr<T, BASE> {
     fn clone(&self) -> Self {
         *self
     }
 }
-impl<T: Pointable + ?Sized, const BASE: usize> Copy for ConstPtr<T, BASE> {}
+impl<T: Pointable + ?Sized, const BASE: usize> Copy for MutPtr<T, BASE> {}
 
-impl<T: Pointable + ?Sized, const BASE: usize> fmt::Debug for ConstPtr<T, BASE> {
+impl<T: Pointable + ?Sized, const BASE: usize> fmt::Debug for MutPtr<T, BASE> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Pointer::fmt(self, f)
     }
 }
 
-impl<T: Pointable + ?Sized, const BASE: usize> Hash for ConstPtr<T, BASE> {
+impl<T: Pointable + ?Sized, const BASE: usize> Hash for MutPtr<T, BASE> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write_usize(BASE);
         state.write_u16(self.ptr);
@@ -297,7 +369,7 @@ impl<T: Pointable + ?Sized, const BASE: usize> Hash for ConstPtr<T, BASE> {
     }
 }
 
-impl<T: Pointable + ?Sized, const BASE: usize> fmt::Pointer for ConstPtr<T, BASE> {
+impl<T: Pointable + ?Sized, const BASE: usize> fmt::Pointer for MutPtr<T, BASE> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Pointer::fmt(&self.wide(), f)
     }
