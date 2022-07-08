@@ -5,6 +5,7 @@ args@{
   release ? true,
   rootFeatures ? [
     "tinyptr/default"
+    "tinyptr-alloc/default"
     "rkbfirm/default"
   ],
   rustPackages,
@@ -43,6 +44,7 @@ in
   cargo2nixVersion = "0.11.0";
   workspace = {
     tinyptr = rustPackages.unknown.tinyptr."0.1.0";
+    tinyptr-alloc = rustPackages.unknown.tinyptr-alloc."0.1.0";
     rkbfirm = rustPackages.unknown.rkbfirm."0.1.0";
   };
   "registry+https://github.com/rust-lang/crates.io-index".aho-corasick."0.7.18" = overridableMkRustCrate (profileName: rec {
@@ -808,6 +810,16 @@ in
     version = "0.1.0";
     registry = "unknown";
     src = fetchCrateLocal (workspaceSrc + "/lib/tinyptr");
+  });
+  
+  "unknown".tinyptr-alloc."0.1.0" = overridableMkRustCrate (profileName: rec {
+    name = "tinyptr-alloc";
+    version = "0.1.0";
+    registry = "unknown";
+    src = fetchCrateLocal (workspaceSrc + "/lib/tinyptr-alloc");
+    dependencies = {
+      tinyptr = rustPackages."unknown".tinyptr."0.1.0" { inherit profileName; };
+    };
   });
   
   "registry+https://github.com/rust-lang/crates.io-index".unicode-ident."1.0.1" = overridableMkRustCrate (profileName: rec {

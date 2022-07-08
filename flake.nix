@@ -19,8 +19,15 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, cargo2nix, ... } @ inputs: flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
-    let
+  outputs = {
+    self,
+    nixpkgs,
+    flake-utils,
+    rust-overlay,
+    cargo2nix,
+    ...
+  } @ inputs:
+    flake-utils.lib.eachSystem ["x86_64-linux"] (system: let
       overlays = [
         cargo2nix.overlays.default
         (import rust-overlay)
@@ -35,27 +42,27 @@
         target = "thumbv6m-none-eabi";
         packageOverrides = pkgs: pkgs.rustBuilder.overrides.all;
       };
-    in
-    rec {
-      devShells.default = with pkgs; mkShell {
-        buildInputs = [
-          (rust-bin.nightly.latest.default.override {
-            extensions = [ "rust-src" ];
-            targets = ["thumbv6m-none-eabi"];
-          })
-          cargo2nix.packages.${system}.cargo2nix
-          elf2uf2-rs
-          cargo-embed
-          llvmPackages_latest.bintools
-        ];
-      };
-      packages = rec { 
+    in rec {
+      devShells.default = with pkgs;
+        mkShell {
+          buildInputs = [
+            (rust-bin.nightly.latest.default.override {
+              extensions = ["rust-src"];
+              targets = ["thumbv6m-none-eabi"];
+            })
+            cargo2nix.packages.${system}.cargo2nix
+            elf2uf2-rs
+            cargo-embed
+            llvmPackages_latest.bintools
+          ];
+        };
+      packages = rec {
         rkbfirm-source = pkgs.releaseTools.sourceTarball {
           name = "rkbfirm-source";
           src = self;
           officialRelease = true;
           version = self.lastModifiedDate;
-          nativeBuildInputs = [ pkgs.zstd ];
+          nativeBuildInputs = [pkgs.zstd];
           distPhase = ''
             releaseName=rkb1-src-$version
             mkdir -p $out/tarballs
@@ -64,9 +71,11 @@
             (cd .. && tar -cf- $releaseName | zstd --ultra -22 > $out/tarballs/$releaseName.tar.zst) || false
           '';
         };
-        rkbfirm-crate = (rustPkgs.workspace.rkbfirm { }).overrideAttrs(old: {
+        rkbfirm-crate = (rustPkgs.workspace.rkbfirm {}).overrideAttrs (old: {
           configureCargo = "true";
         });
+        tinyptr-crate = rustPkgs.workspace.tinyptr {};
+        tinyptr-alloc-crate = rustPkgs.workspace.tinyptr-alloc {};
         rkbfirm = pkgs.stdenvNoCC.mkDerivation {
           pname = "rkbfirm";
           src = self;
@@ -93,10 +102,12 @@
         };
         default = rkbfirm;
         devShell = devShells.default;
+        inherit formatter;
       };
       nixosModules.default = import ./nixos {
         inherit inputs system;
       };
       hydraJobs = packages;
+      formatter = pkgs.alejandra;
     });
 }

@@ -19,6 +19,8 @@
 use core::hash::Hash;
 
 pub mod ptr;
+mod tiny_ref;
+pub use tiny_ref::*;
 
 /// Trait that defines valid destination types for a pointer.
 pub trait Pointable {
