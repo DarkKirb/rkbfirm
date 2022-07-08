@@ -6,6 +6,7 @@
 //! It uses a const generic parameter to set the base address of the pointer. This allows multiple
 //! small memory pools to coexist.
 #![feature(coerce_unsized)]
+#![feature(const_trait_impl)]
 #![feature(mixed_integer_ops)]
 #![feature(never_type)]
 #![feature(ptr_metadata)]

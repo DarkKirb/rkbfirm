@@ -2,7 +2,7 @@ use core::{num::NonZeroU16, marker::{PhantomData, Unsize}, ops::CoerceUnsized, f
 
 use crate::Pointable;
 
-use super::MutPtr;
+use super::{MutPtr, Unique};
 
 /// `*mut T` but non-zero and covariant
 pub struct NonNull<T: Pointable + ?Sized, const BASE: usize> {
@@ -150,6 +150,10 @@ impl<T: Pointable + ?Sized, const BASE: usize> hash::Hash for NonNull<T, BASE> {
         self.as_ptr().hash(state)
     }
 }
-// TODO: From<Unique<T>>
+impl<T: Pointable + ?Sized, const BASE: usize> From<Unique<T, BASE>> for NonNull<T, BASE> {
+    fn from(ptr: Unique<T, BASE>) -> Self {
+        ptr.pointer
+    }
+}
 // TODO: From<RefMut<T>>
 // TODO: From<Ref<T>>

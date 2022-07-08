@@ -7,3 +7,5 @@ mod mut_ptr;
 pub use mut_ptr::*;
 mod non_null;
 pub use non_null::*;
+mod unique;
+pub use unique::*;
