@@ -54,6 +54,7 @@
             elf2uf2-rs
             cargo-embed
             llvmPackages_latest.bintools
+            picotool
           ];
         };
       packages = rec {
@@ -73,6 +74,9 @@
         };
         rkbfirm-crate = (rustPkgs.workspace.rkbfirm {}).overrideAttrs (old: {
           configureCargo = "true";
+          postPatch = ''
+            sed -i 's/git_version::git_version!()/"${self.lastModifiedDate}"/' build.rs
+          '';
         });
         tinyptr-crate = rustPkgs.workspace.tinyptr {};
         tinyptr-alloc-crate = rustPkgs.workspace.tinyptr-alloc {};
